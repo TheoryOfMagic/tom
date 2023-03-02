@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import math
 import os
 import random
@@ -6,18 +8,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import cm
-from scipy.optimize import curve_fit
+
+from tom.util.math import count_graphs
+from tom.util.math import generate_binary_strings
+from tom.util.math import generate_unique_combinations
 
 cmap = cm.get_cmap("viridis")
-
-
-def count_graphs(n):
-    edges = n * (n - 1) / 2
-    return 2**edges
-
-
-# for i in [3,4,5,6,7,8,9,10]:
-#    print(f"an {i} sided shape has {count_graphs(i)} possible symbols")
 
 
 def draw_shape(n, radius=1, start_angle=None):
@@ -131,7 +127,7 @@ def draw_edge_groups(n, radius=1, start_angle=None):
     small_angle = [start_angle + i * 2 * np.pi / n for i in np.arange(1, n + 1)]
 
     x, y = (radius * np.sin(small_angle), radius * np.cos(small_angle))
-    for i in np.arange(int((math.ceil(len(x) / 2)))):
+    for i in np.arange(int(math.ceil(len(x) / 2))):
         c = cmap(i / (math.ceil(len(x) / 2)))
         print(i)
         # for j in np.arange(len(x))[i+1:]:
@@ -150,15 +146,6 @@ def draw_edge_groups(n, radius=1, start_angle=None):
 
     plt.legend()
     plt.show()
-
-
-def binomial_coeff(n, k):
-    return math.factorial(n) / (math.factorial(n - k))
-
-
-def distance_from_origin(x, y):
-    d = np.sqrt(x**2 + y**2)
-    return d
 
 
 def calculate_all_possible_shapes(n, k):
@@ -338,35 +325,6 @@ def draw_spell_search(
     plt.show()
 
 
-def genbin(n, bs=""):
-    if n - 1:
-        genbin(n - 1, bs + "0")
-        genbin(n - 1, bs + "1")
-    else:
-        print("1" + bs)
-
-
-def generate_binary_strings(bit_count):
-    binary_strings = []
-
-    def genbin(n, bs=""):
-        if len(bs) == n:
-            binary_strings.append(bs)
-        else:
-            genbin(n, bs + "0")
-            genbin(n, bs + "1")
-
-    genbin(bit_count)
-    return binary_strings
-
-
-def cycle_list(l, loops=1):
-    n = len(l)
-    for t in range(loops):
-        l = [l[(i + 1) % n] for i in range(n)]
-    return l
-
-
 def decode_shape(
     in_array, n, k=1, radius=1, start_angle=None, color="k", label=None, base="Polygon"
 ):
@@ -453,32 +411,6 @@ def decode_shape(
     # plt.show()
 
 
-def generate_unique_combinations(L):
-    combinations = generate_binary_strings(L)
-    non_repeating = [combinations[0]]
-    for i in range(len(combinations)):
-        if i % round(0.1 * len(combinations)) == 0:
-            print(f"{100*i/len(combinations):.1f}%")
-
-        ref = list(combinations[i])
-        N = len(ref)
-        test = 0
-        for j in range(len(non_repeating)):
-            for n in range(N):
-                if cycle_list(list(non_repeating[j]), loops=n + 1) == ref:
-                    test += 1
-                # else:
-                #    print(combinations[j], ref)
-
-        if test == 0:
-            non_repeating.append(combinations[i])
-
-    # print(non_repeating)
-    for i in np.arange(len(non_repeating)):
-        non_repeating[i] = [int(s) for s in list(non_repeating[i])]
-    return non_repeating
-
-
 def draw_feature_key(
     N=11,
     output_name="output.csv",
@@ -492,7 +424,6 @@ def draw_feature_key(
     base="Polygon",
 ):
     data = pd.read_csv(output_name)
-    data_trans = data.T
     print(data.keys())
     if key == "area_types":
         features = set(data["area_types"].astype(str))
@@ -683,10 +614,7 @@ def decode_shape_circular(
 
     # x,y = (radius * np.sin(small_angle), radius * np.cos(small_angle))
 
-    if label == None:
-        labelled = True
-    else:
-        labelled = False
+    labelled = label == None
 
     for i in range(n):
         P = [x[i], y[i]]
@@ -728,7 +656,6 @@ def save_feature_key(
     base="Polygon",
 ):
     data = pd.read_csv(output_name)
-    data_trans = data.T
     print(data.keys())
     if key == "area_types":
         features = set(data["area_types"].astype(str))
@@ -811,212 +738,3 @@ def save_feature_key(
             transparent=True,
         )
         plt.close()
-
-
-"""P = [1.2246467991473532e-16, -1.0]
-Q = [-0.5406408174555972, -0.8412535328311814]
-b = 1
-X,Y,a,b = draw_non_centre_circle(P,Q,b,thetas = None)#
-
-plt.plot(X,Y)
-plt.plot(a,b,".")
-plt.plot(P[0],P[1],"x",c = 'r')
-plt.plot(Q[0],Q[1],"x",c = 'b')
-plt.show()
-
-P = [0.5406408174555978, -0.8412535328311811]
-Q = [1.2246467991473532e-16, -1.0]
-b = 1
-X,Y,a,b = draw_non_centre_circle(P,Q,b,thetas = None)#
-
-plt.plot(X,Y)
-plt.plot(a,b,".")
-plt.plot(P[0],P[1],"x",c = 'r')
-plt.plot(Q[0],Q[1],"x",c = 'b')
-plt.show()"""
-# n = 5
-# in_array = [1,0,1,1,0]
-# for k in range(4):
-#    plt.subplot(1,4,k+1)
-#    plt.title(f'{str(in_array)}, k = {k+1}')
-#    decode_shape(in_array,n,k=k+1)
-# plt.show()
-# n = 11
-
-# print(x2,y2)
-# decode_shape_circular([1,0,1,1,0,1,0,1,1,0,1],k = 3,centered = False, s = 1, base = "Polygon")
-# plt.show()
-"""N = 11
-if os.path.isfile(f'Uniques/{N}.npy'):
-    non_repeating = np.load(f'Uniques/{N}.npy')
-else:
-    non_repeating = generate_unique_combinations(N)
-    non_repeating = np.array(non_repeating)
-    np.save(f"Uniques/{N}.npy",non_repeating)
-
-S = [0.7,1,5,10,100]
-
-for j in range(len(S)):
-    s = S[j]
-    plt.subplot(1,len(S),j+1)
-    for i in range(len(S)):
-        input_array = random.choice(non_repeating[:10])
-        decode_shape_circular(input_array,k=i+1,centered = False,s = s)
-    #plt.vlines(0,-2,2)
-    #plt.hlines(0,-2,2)
-    plt.title(f'b = {s}')
-
-plt.savefig("varying b.png",transparent = True)
-plt.show()"""
-
-# keys = ['level', 'school', 'damage','area_types','range']
-# for i in range(len(keys)):
-#    save_feature_key(color = 'k',key = keys[i],k = i+1,shape = "Straight",s = 1,base = "Polygon")
-
-# i = 0
-
-# draw_feature_key(color = 'k',key = keys[i],k = i+1,shape = "Straight",s = 1,base = "Polygon")
-# save_feature_key(color = 'k',key = keys[i],k = i+1,shape = "Straight",s = 1,base = "Polygon")
-# draw_spell_search("Fireball",shape = "Non_Centred", breakdown = True,s = 1,base = "CubicFunction",save = True)
-# draw_spell_search("Random",shape = "Non_Centred", breakdown = True,s = 1,base = "SemiCircular")
-
-
-"""N = 8
-bins = generate_binary_strings(N)
-uniq = generate_unique_combinations(N)
-groups = [[]]*len(uniq)
-#print(groups)
-for i,u in enumerate(uniq):
-    #print(u)
-    #print(groups[i])
-    groups[i] = [u]
-#print(uniq)
-
-for b in bins:
-    b = [int(b_) for b_ in list(b)]
-    for n in np.arange(1,N):
-        #print(n)
-        #print(cycle_list(b,n))
-        if cycle_list(b,n) in uniq:
-            #print("here")
-            index = uniq.index(cycle_list(b,n))
-            if b not in groups[index]:
-                groups[index].append(b)"""
-
-# for g in groups:
-# print(np.array(g))
-"""diff = 0
-for g in groups:
-    if len(g) != N and len(g) != 1:
-        diff += len(g)
-        #print(g)
-        #print(len(g))
-        #print("-------------")
-    else:
-        pass
-        #print(len(g))
-        #print("-------------")
-print((2**N - 2 + diff)/N + 2, len(uniq))
-n = 2
-print(1/N * (n**6 + n**3 + 2*n**2 + 2*n))
-f = lambda n:sum(1-any(i>int(b[j::-1]+b[:j:-1],2)or j*(i>=int(b[j:]+b[:j],2))for j in range(n))for i in range(2**n)for b in[bin(i+2**n)[3:]])
-print(f(N))
-#print((2**N - 2)/N + 2)
-#print((2**N - 2)%N)
-#print((2**N - 2 + (2**N - 2)%N)/N + 2)
-#print(len(uniq))
-
-Expect = []
-Actual = []
-Correction = []
-N_list = []
-for N in np.arange(3,14):
-    N_list.append(N)
-    #print(f'\subsection{{n = {N}}}')
-    #print("\begin{multicols}{4}")
-    if os.path.isfile(f'Uniques/{N}.npy'):
-        non_repeating = np.load(f'Uniques/{N}.npy')
-    else:
-        non_repeating = generate_unique_combinations(N)
-        non_repeating = np.array(non_repeating)
-        np.save(f"Uniques/{N}.npy",non_repeating)
-    #for nr in non_repeating:
-        #print(nr,"\n")
-    #print("\end{multicols}")
-    print(f'----------{N}------------')
-    #print((2**N-2)%N)
-    print(len(non_repeating))
-    Expect.append((2**N - 2)/N + 2)
-    Actual.append(len(non_repeating))
-    Correction.append(len(non_repeating) - ((2**N - 2)/N + 2))
-    #print((2**N - 2)/N + 2)
-
-x,y = [],[]
-for i in np.arange(len(Correction)):
-    if Correction[i] != 0:
-        x.append(N_list[i])
-        y.append(Correction[i])
-#print(Correction)
-plt.plot(x,y,".")
-plt.show()"""
-
-"""n = 0
-N = 4
-folders = os.listdir(path = "keys")
-print(folders)
-doc_folders = ["Areas","Damage_Type","Level","Range","School"]
-for fold in folders:
-    n = 0
-    doc_fold = doc_folders[folders.index(fold)]
-    print(f"\n\subsection{{ {doc_fold} }}\n")
-    files = os.listdir("keys/" + fold)
-    print(
-        r"\begin{figure}[H]","\n","\t\centering\n",)
-    for file in files:
-            n += 1
-            print(f"\t\includegraphics[scale = 0.2]{{Dict_Files/{doc_fold}/{file}}}\n",
-            "\t\label{{fig:{file}}}\hfill",)
-            if  n%N ==0:
-                print(f'\t',r'\\[\smallskipamount]')
-                n = 0
-            
-                
-    print("\end{figure}\n")"""
-
-in_arrays = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-]
-for i in range(len(in_arrays)):
-    print(i)
-    decode_shape_circular(
-        in_arrays[i],
-        k=i + 1,
-        radius=1,
-        start_angle=None,
-        label=None,
-        color="k",
-        centered=True,
-        s=0,
-        base="Polygon",
-    )
-plt.title("Find Familiar")
-plt.show()
-
-for i in range(len(in_arrays)):
-    print(i)
-    decode_shape(
-        in_arrays[i],
-        n=11,
-        k=i + 1,
-        radius=1,
-        start_angle=None,
-        label=None,
-        color="k",
-        base="Polygon",
-    )
-plt.title("Find Familiar")
-plt.show()

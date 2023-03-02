@@ -1,6 +1,8 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,git,images,data,database
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,visualstudiocode,git,images,data,database
 
+local.py
+
 ### Data ###
 *.csv
 *.dat
