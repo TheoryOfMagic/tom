@@ -13,6 +13,9 @@ pandas = "^1.5.3"
 matplotlib = "^3.7.0"
 
 
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.0.253"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
@@ -25,3 +28,6 @@ extend = "../ruff.toml"
 known-first-party = ["semgrep_app", "semgrep_app_protos", "tests"]
 force-single-line = true
 required-imports = ["from __future__ import annotations"]
+
+[tool.autoflake]
+check = true
