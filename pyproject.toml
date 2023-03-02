@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "tom"
+version = "0.1.0"
+description = ""
+authors = ["ThatDevShparki <matt.murray@r2c.dev>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+matplotlib = "^3.7.0"
+numpy = "^1.24.2"
+pandas = "^1.5.3"
+scipy = "^1.10.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.ruff]
+extend = "../ruff.toml"
+
+[tool.ruff.isort]
+known-first-party = ["semgrep_app", "semgrep_app_protos", "tests"]
+force-single-line = true
+required-imports = ["from __future__ import annotations"]
