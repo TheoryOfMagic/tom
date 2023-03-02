@@ -43,8 +43,6 @@ ignore = [
     "SIM102",
     # TODO: use contextlib.suppress
     "SIM105",
-    # probably never enable `or` branch merging cause of readability
-    "SIM114",
     # TODO: use file open context manager
     "SIM115",
 ]
