@@ -7,12 +7,16 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import structlog
 from matplotlib import cm
 
 from tom.util.math import count_graphs
 from tom.util.math import generate_unique_combinations
 
 cmap = cm.get_cmap("viridis")
+
+
+logger = structlog.get_logger()
 
 
 def draw_shape(n, radius=1, start_angle=None):
