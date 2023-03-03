@@ -76,3 +76,17 @@ ignore = [
 [tool.ruff.isort]
 force-single-line = true
 required-imports = ["from __future__ import annotations"]
+
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__"]
+
+useLibraryCodeForTypes = true
+
+strict = ["src"]
+typeCheckingMode = "strict"
+
+reportUnknownMemberType = "information"
+
+extraPaths = ["src"]
