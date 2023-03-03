@@ -1,6 +1,7 @@
+"""Utility maths library."""
+
 from __future__ import annotations
 
-import math
 import typing as t
 
 import numpy as np
@@ -17,19 +18,27 @@ NDArray = NDArrayInt | NDArrayFloat
 
 
 def count_graphs(n: Int) -> Float:
+    """Count subgraphs contained within a set of nodes.
+
+    Parameters
+    ----------
+    n : Int
+        The total number of nodes in the graph.
+
+    """
     edges = n * (n - 1) / 2
     return 2**edges
 
 
-def binomial_coeff(n: Int, k: Int) -> Float:
-    return np.divide(math.factorial(n), (math.factorial(n - k)))
-
-
-def distance_from_origin(x: Float, y: Float) -> Float:
-    return np.sqrt(x**2 + y**2)
-
-
 def generate_binary_strings(bit_count: Int) -> list[str]:
+    """Generate all valid binary strings up to length bit_count.
+
+    Parameters
+    ----------
+    bit_count : Int
+        The binary string bit count.
+
+    """
     binary_strings: list[str] = []
 
     def genbin(n: Int, bs: str = "") -> None:
@@ -44,13 +53,38 @@ def generate_binary_strings(bit_count: Int) -> list[str]:
 
 
 def cycle_list(loop: list[t.Any], loops: Int = 1):
-    n = len(loop)
-    for _t in range(loops):
-        loop = [loop[(i + 1) % n] for i in range(n)]
-    return loop
+    """Rotate an array by the given number of loops.
+
+    Parameters
+    ----------
+    loop : list[any]
+        The array to rotate.
+    loops : Int
+        The number of cycles to loop.
+
+    """
+    return loop[loops:] + loop[:loops]
 
 
 def generate_unique_combinations(n: Int) -> list[list[Int]]:
+    """Generate all binary strings that are unique respective to rotational symmetry.
+
+    This method attempts to identify all rotational equivalence classes for byte strings
+    up to a given length. In otherwords, all binary strings that are rotations of
+    each other are considered equivalent and this method attempts to classify those
+    varying groups. We then identify each class by its minimal element and return a list
+    of those elements.
+
+    Parameters
+    ----------
+    n : Int
+        The binary string bit count.
+
+    TODO
+    ----
+     - This method can *definitely* be optimized. Let's optimize it :)
+
+    """
     combinations = generate_binary_strings(n)
     non_repeating = [combinations[0]]
     for i in range(len(combinations)):

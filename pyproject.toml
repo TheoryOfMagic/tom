@@ -17,6 +17,7 @@ structlog = "^22.3.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.0.253"
+pydocstyle = "^6.3.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -90,3 +91,8 @@ typeCheckingMode = "strict"
 reportUnknownMemberType = "information"
 
 extraPaths = ["src"]
+
+
+[tool.pydocstyle]
+# Using numpydocstyle- example here: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html
+convention = "numpy"
