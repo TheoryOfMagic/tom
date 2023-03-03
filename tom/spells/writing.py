@@ -10,7 +10,6 @@ import pandas as pd
 from matplotlib import cm
 
 from tom.util.math import count_graphs
-from tom.util.math import generate_binary_strings
 from tom.util.math import generate_unique_combinations
 
 cmap = cm.get_cmap("viridis")
