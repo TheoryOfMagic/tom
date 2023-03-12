@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import math
 import typing as t
+from enum import Enum
+from enum import auto
 
 import numpy as np
 import numpy.typing as npt
@@ -101,3 +104,84 @@ def generate_unique_combinations(n: Int) -> list[list[Int]]:
 
     int_non_repeating: list[list[Int]] = [[int(s) for s in nr] for nr in non_repeating]
     return int_non_repeating
+
+
+class ShapeBase(Enum):
+    polygon = auto()
+    line = auto()
+    quadratic = auto()
+    quadratic2 = auto()
+    semi_circular = auto()
+    quarter_circular = auto()
+    cubic_function = auto()
+
+
+def _decode_path(
+    in_array: NDArrayInt | list[int],
+    k: int,
+    start_angle: float | None = None,
+    base: ShapeBase = ShapeBase.polygon,
+    radius: int | None = None,  # circular path if non-null
+    s: int = 0,  # only relevant for circular paths
+    centered: bool = True,  # only relevant for circular paths
+) -> NDArrayFloat:
+    path: NDArrayFloat = np.array([])
+
+    n = len(in_array)
+
+    if start_angle == None:
+        start_angle = np.pi / n
+
+    x: NDArray = np.array([])
+    y: NDArray = np.array([])
+
+    if base == ShapeBase.polygon:
+        small_angle = np.fromiter(
+            (start_angle + i * 2 * np.pi / n for i in np.arange(1, n + 1)),
+            np.float_,
+        )
+
+        x = radius * np.sin(small_angle)
+        y = radius * np.cos(small_angle)
+
+    elif base == ShapeBase.line:
+        x = np.arange(0, n)
+        y = np.zeros(n)
+
+    elif base == ShapeBase.quadratic:
+        x = np.arange(-math.floor(n / 2), math.ceil(n / 2))
+        y = np.array(x_**2 for x_ in x)
+
+    elif base == ShapeBase.quadratic2:
+        x = np.array([0])
+        while len(x) < n:
+            x = np.append(
+                x,
+                (-x[-1] + 1) if -x[-1] in x else (-x[-1]),
+            )
+        y = np.array(x_**2 for x_ in x)
+
+    elif base == ShapeBase.semi_circular:
+        theta0 = 0
+        theta1 = -np.pi
+        theta = np.linspace(theta0, theta1, n)
+        x = radius * np.cos(theta)
+        y = radius * np.sin(theta)
+
+    elif base == ShapeBase.quarter_circular:
+        theta0 = 0
+        theta1 = -np.pi / 2
+        theta = np.linspace(theta0, theta1, n)
+        x = radius * np.cos(theta)
+        y = radius * np.sin(theta)
+
+    elif base == ShapeBase.cubic_function:
+        x = np.arange(-math.floor(n / 2), math.ceil(n / 2))
+        y = np.array(0.1 * x_**3 + -0.75 * x_ for x_ in x)
+
+    for i in range(n):
+        P = np.array([x[i], y[i]])
+        Q = np.array([x[(i + k) % n], y[(i + k) % n]])
+
+    print(P, Q)
+    return path

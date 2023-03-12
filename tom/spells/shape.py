@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from abc import ABC
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -96,7 +97,6 @@ def draw_non_centre_circle(
 
 def decode_shape(
     in_array: NDArrayInt | list[int],
-    n: int,
     k: int = 1,
     radius: float = 1.0,
     start_angle: float | None = None,
@@ -104,6 +104,7 @@ def decode_shape(
     label: str | None = None,
     base: str | None = "Polygon",
 ):
+    n = len(in_array)
     if start_angle == None:
         start_angle = np.pi / n
 
@@ -111,7 +112,8 @@ def decode_shape(
     y: NDArray = np.array([])
     if base == "Polygon":
         small_angle = np.fromiter(
-            (start_angle + i * 2 * np.pi / n for i in np.arange(1, n + 1)), np.float_
+            (start_angle + i * 2 * np.pi / n for i in np.arange(1, n + 1)),
+            np.float_,
         )
         x, y = (radius * np.sin(small_angle), radius * np.cos(small_angle))
     elif base == "Line":
@@ -212,8 +214,10 @@ def decode_shape_circular(
     y: NDArray = np.array([])
 
     if base == "Polygon":
-        small_angle = [start_angle + i * 2 * np.pi / n for i in range(1, n + 1)]
-
+        small_angle = np.fromiter(
+            (start_angle + i * 2 * np.pi / n for i in np.arange(1, n + 1)),
+            np.float_,
+        )
         x, y = (radius * np.sin(small_angle), radius * np.cos(small_angle))
     elif base == "Line":
         x = np.arange(0, n)
