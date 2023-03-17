@@ -3,6 +3,8 @@ from __future__ import annotations
 from enum import Enum
 from enum import auto
 
+from pydantic import BaseModel
+
 SpellRanges: list[int] = [0, 5, 10, 30, 60, 90, 100, 150, 300, 500, 1000, 5280]
 SpellLevels: list[int] = list(range(0, 12))
 
@@ -57,3 +59,24 @@ class SpellDamageType(IndexedEnum):
     lightning = auto()
     fire = auto()
     slashing = auto()
+
+
+class SpellGeometryParams(BaseModel):
+    class Config:
+        frozen = True
+
+    node_count: int = 1
+    start_angle: float = 0.0
+    radius: float = 1.0
+
+    @property
+    def n(self) -> int:
+        return self.node_count
+
+    @property
+    def t0(self) -> float | None:
+        return self.start_angle
+
+    @property
+    def r(self) -> float:
+        return self.radius

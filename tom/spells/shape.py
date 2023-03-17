@@ -6,9 +6,9 @@ import typing as t
 import matplotlib.pyplot as plt_
 import numpy as np
 
-from tom.spells.geometry import RadialSpellGeometryParams
 from tom.spells.geometry import SpellGeometries
 from tom.spells.geometry import SpellGeometry
+from tom.spells.types import SpellGeometryParams
 from tom.util.math import NDArray
 from tom.util.math import NDArrayFloat
 from tom.util.math import NDArrayInt
@@ -108,7 +108,7 @@ def decode(
     plt: t.Any = plt_,
 ):
     for k, in_array in enumerate(feature_array, 1):
-        params = RadialSpellGeometryParams(
+        params = SpellGeometryParams(
             node_count=len(in_array),
             start_angle=np.pi / len(in_array) if start_angle is None else start_angle,
             radius=radius,
