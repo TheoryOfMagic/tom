@@ -5,9 +5,11 @@ import typing as t
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import Iterator
-from dataclasses import dataclass
+from enum import Enum
+from enum import auto
 
 import numpy as np
+from pydantic import BaseModel
 
 from tom.util.math import Float
 from tom.util.math import Int
@@ -17,6 +19,16 @@ from tom.util.math import NDArrayInt
 SpellGeometryAxis = NDArrayInt | NDArrayFloat
 SpellGeometryNode = Int | Float
 SpellGeometryElement = tuple[SpellGeometryNode, SpellGeometryNode]
+
+
+class SpellGeometries(Enum):
+    line = auto()
+    polygon = auto()
+    quadratic = auto()
+    quadratic_centered = auto()
+    cubic = auto()
+    semi_circle = auto()
+    quarter_circle = auto()
 
 
 class SpellGeometry(Iterator[SpellGeometryElement]):
@@ -50,9 +62,9 @@ class SpellGeometry(Iterator[SpellGeometryElement]):
     # Factory methods
     @staticmethod
     def build_with(
-        strategy: str | type[SpellGeometryBuildStrategy[P]], params: P
+        strategy: SpellGeometries | type[SpellGeometryBuildStrategy[P]], params: P
     ) -> SpellGeometry:
-        if isinstance(strategy, str):
+        if isinstance(strategy, SpellGeometries):
             # recasting for generics type checking on P
             strategy = t.cast(
                 type[SpellGeometryBuildStrategy[P]],
@@ -67,8 +79,10 @@ class SpellGeometry(Iterator[SpellGeometryElement]):
 P = t.TypeVar("P", bound="SpellGeometryParams")
 
 
-@dataclass(frozen=True)
-class SpellGeometryParams:
+class SpellGeometryParams(BaseModel):
+    class Config:
+        frozen = True
+
     node_count: int = 1
 
     @property
@@ -76,7 +90,6 @@ class SpellGeometryParams:
         return self.node_count
 
 
-@dataclass(frozen=True)
 class RadialSpellGeometryParams(SpellGeometryParams):
     start_angle: float = 0.0
     radius: float = 1.0
@@ -93,19 +106,19 @@ class RadialSpellGeometryParams(SpellGeometryParams):
 # Geometry Strategies
 
 _spell_geometry_strategies_registry: dict[
-    str, type[SpellGeometryBuildStrategy[t.Any]]
+    SpellGeometries, type[SpellGeometryBuildStrategy[t.Any]]
 ] = {}
 
 
 class SpellGeometryBuildStrategy(ABC, t.Generic[P]):
-    strategy: str | None = None
+    geometry: SpellGeometries | None = None
 
     def __init_subclass__(cls) -> None:
         if cls == SpellGeometryBuildStrategy:
             pass
 
-        if cls.strategy and cls.strategy not in _spell_geometry_strategies_registry:
-            _spell_geometry_strategies_registry[cls.strategy] = cls
+        if cls.geometry and cls.geometry not in _spell_geometry_strategies_registry:
+            _spell_geometry_strategies_registry[cls.geometry] = cls
 
         return super().__init_subclass__()
 
@@ -116,7 +129,8 @@ class SpellGeometryBuildStrategy(ABC, t.Generic[P]):
 
 
 class LineSpell(SpellGeometryBuildStrategy[SpellGeometryParams]):
-    strategy = "line"
+    # TODO: Issues
+    geometry = SpellGeometries.line
 
     @classmethod
     def build(cls, params: SpellGeometryParams) -> SpellGeometry:
@@ -127,7 +141,7 @@ class LineSpell(SpellGeometryBuildStrategy[SpellGeometryParams]):
 
 
 class PolygonSpell(SpellGeometryBuildStrategy[RadialSpellGeometryParams]):
-    strategy = "polygon"
+    geometry = SpellGeometries.polygon
 
     @classmethod
     def build(cls, params: RadialSpellGeometryParams) -> SpellGeometry:
@@ -143,11 +157,11 @@ class PolygonSpell(SpellGeometryBuildStrategy[RadialSpellGeometryParams]):
 
 
 class QuadraticSpell(SpellGeometryBuildStrategy[SpellGeometryParams]):
-    strategy = "quadratic"
+    geometry = SpellGeometries.quadratic
 
     @classmethod
     def build_from_x(cls, x: SpellGeometryAxis) -> SpellGeometry:
-        return SpellGeometry(x=x, y=np.array(x_**2 for x_ in x))
+        return SpellGeometry(x=x, y=np.fromiter((x_**2 for x_ in x), np.float_))
 
     @classmethod
     def build(cls, params: SpellGeometryParams) -> SpellGeometry:
@@ -157,34 +171,39 @@ class QuadraticSpell(SpellGeometryBuildStrategy[SpellGeometryParams]):
 
 
 class QuadraticCenteredSpell(QuadraticSpell):
-    strategy = "quadratic_centered"
+    geometry = SpellGeometries.quadratic_centered
 
     @classmethod
     def build(cls, params: SpellGeometryParams) -> SpellGeometry:
         _x = np.array([0])
         while len(_x) < params.n:
-            if -_x[-1] in _x:
-                _x = np.append(_x, (-_x[-1] + 1) if -_x[-1] in _x else (-_x[-1]))
+            _x = np.append(
+                _x,
+                (-_x[-1] + 1) if -_x[-1] in _x else (-_x[-1]),
+            )
 
         return cls.build_from_x(x=_x)
 
 
 class CubicSpell(SpellGeometryBuildStrategy[SpellGeometryParams]):
-    strategy = "cubic"
+    geometry = SpellGeometries.cubic
 
     @classmethod
     def build_from_x(cls, x: SpellGeometryAxis) -> SpellGeometry:
-        return SpellGeometry(x=x, y=np.array(0.1 * x_**3 + -0.75 * x_ for x_ in x))
+        return SpellGeometry(
+            x=x,
+            y=np.fromiter((0.1 * x_**3 + -0.75 * x_ for x_ in x), np.float_),
+        )
 
     @classmethod
     def build(cls, params: SpellGeometryParams) -> SpellGeometry:
         return cls.build_from_x(
-            x=np.arange(-math.floor(params.n / 2), math.ceil(params.n / 2)),
+            x=np.arange(-math.floor(params.n / 2), math.ceil(params.n / 2))
         )
 
 
 class SemiCircleSpell(SpellGeometryBuildStrategy[RadialSpellGeometryParams]):
-    strategy = "semi_circle"
+    geometry = SpellGeometries.semi_circle
 
     @classmethod
     def build(cls, params: RadialSpellGeometryParams) -> SpellGeometry:
@@ -199,7 +218,7 @@ class SemiCircleSpell(SpellGeometryBuildStrategy[RadialSpellGeometryParams]):
 
 
 class QuarterCircleSpell(SpellGeometryBuildStrategy[RadialSpellGeometryParams]):
-    strategy = "quarter_circle"
+    geometry = SpellGeometries.quarter_circle
 
     @classmethod
     def build(cls, params: RadialSpellGeometryParams) -> SpellGeometry:

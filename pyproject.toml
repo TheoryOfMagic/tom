@@ -2,7 +2,8 @@
 name = "tom"
 version = "0.1.0"
 description = ""
-authors = ["ThatDevShparki <matt.murray@r2c.dev>"]
+authors = ["ThatDevShparki <thatdevshparki@gmail.com>"]
+maintainers = ["ThatDevShparki <thatdevshparki@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -80,17 +81,9 @@ required-imports = ["from __future__ import annotations"]
 
 
 [tool.pyright]
-include = ["src"]
-exclude = ["**/__pycache__"]
-
 useLibraryCodeForTypes = true
-
-strict = ["src"]
 typeCheckingMode = "strict"
-
 reportUnknownMemberType = "information"
-
-extraPaths = ["src"]
 
 
 [tool.pydocstyle]

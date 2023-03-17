@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import math
-from abc import ABC
+import typing as t
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt_
 import numpy as np
 
+from tom.spells.geometry import RadialSpellGeometryParams
+from tom.spells.geometry import SpellGeometries
+from tom.spells.geometry import SpellGeometry
 from tom.util.math import NDArray
 from tom.util.math import NDArrayFloat
 from tom.util.math import NDArrayInt
@@ -95,63 +98,44 @@ def draw_non_centre_circle(
     return (X, Y, a, b)
 
 
-def decode_shape(
-    in_array: NDArrayInt | list[int],
-    k: int = 1,
+def decode(
+    feature_array: list[list[int]],
     radius: float = 1.0,
     start_angle: float | None = None,
     color: str = "k",
     label: str | None = None,
-    base: str | None = "Polygon",
+    base: SpellGeometries = SpellGeometries.polygon,
+    plt: t.Any = plt_,
 ):
-    n = len(in_array)
-    if start_angle == None:
-        start_angle = np.pi / n
-
-    x: NDArray = np.array([])
-    y: NDArray = np.array([])
-    if base == "Polygon":
-        small_angle = np.fromiter(
-            (start_angle + i * 2 * np.pi / n for i in np.arange(1, n + 1)),
-            np.float_,
+    for k, in_array in enumerate(feature_array, 1):
+        params = RadialSpellGeometryParams(
+            node_count=len(in_array),
+            start_angle=np.pi / len(in_array) if start_angle is None else start_angle,
+            radius=radius,
         )
-        x, y = (radius * np.sin(small_angle), radius * np.cos(small_angle))
-    elif base == "Line":
-        x = np.arange(0, n + 1)
-        y = np.zeros((1, n))
 
-    elif base == "Quadratic":
-        x = np.arange(-math.floor(n / 2), math.ceil(n / 2))
-        y = np.array(x_**2 for x_ in x)
-    elif base == "Quadratic2":
-        x = np.array([0])
-        while len(x) < n:
-            if -x[-1] in x:
-                x = np.append(
-                    x,
-                    (-x[-1] + 1) if -x[-1] in x else (-x[-1]),
-                )
-        y = np.array(x_**2 for x_ in x)
-    elif base == "SemiCircular":
-        theta0 = 0
-        theta1 = -np.pi
-        theta = np.linspace(theta0, theta1, n)
-        x = radius * np.cos(theta)
-        y = radius * np.sin(theta)
-    elif base == "QuarterCircular":
-        theta0 = 0
-        theta1 = -np.pi / 2
-        theta = np.linspace(theta0, theta1, n)
-        x = radius * np.cos(theta)
-        y = radius * np.sin(theta)
-    elif base == "CubicFunction":
-        x = np.arange(-math.floor(n / 2), math.ceil(n / 2))
-        y = np.array(0.1 * x_**3 + -0.75 * x_ for x_ in x)
+        geometry = SpellGeometry.build_with(base, params)
 
-    labelled = False
-    for i in range(n):
-        if in_array[i] == 1:
-            if labelled == False:
+        x, y, n = geometry.x, geometry.y, params.n
+
+        labelled = False
+        for i in range(n):
+            if in_array[i] == 1:
+                if labelled == False:
+                    plt.plot(
+                        [x[i], x[(i + k) % n]],
+                        [y[i], y[(i + k) % n]],
+                        "-",
+                        color=color,
+                        label=label,
+                    )
+                    labelled = True
+                else:
+                    plt.plot(
+                        [x[i], x[(i + k) % n]], [y[i], y[(i + k) % n]], "-", color=color
+                    )
+            elif in_array[i] == 2:
+                offset = 0.01
                 plt.plot(
                     [x[i], x[(i + k) % n]],
                     [y[i], y[(i + k) % n]],
@@ -159,37 +143,23 @@ def decode_shape(
                     color=color,
                     label=label,
                 )
-                labelled = True
+                plt.plot(
+                    [x[i] + offset, x[(i + k) % n] + offset],
+                    [y[i] + offset, y[(i + k) % n] + offset],
+                    "-",
+                    color=color,
+                )
             else:
                 plt.plot(
-                    [x[i], x[(i + k) % n]], [y[i], y[(i + k) % n]], "-", color=color
+                    [x[i], x[(i + k) % n]],
+                    [y[i], y[(i + k) % n]],
+                    ":",
+                    linewidth=0.5,
+                    color=color,
                 )
-        elif in_array[i] == 2:
-            offset = 0.01
-            plt.plot(
-                [x[i], x[(i + k) % n]],
-                [y[i], y[(i + k) % n]],
-                "-",
-                color=color,
-                label=label,
-            )
-            plt.plot(
-                [x[i] + offset, x[(i + k) % n] + offset],
-                [y[i] + offset, y[(i + k) % n] + offset],
-                "-",
-                color=color,
-            )
-        else:
-            plt.plot(
-                [x[i], x[(i + k) % n]],
-                [y[i], y[(i + k) % n]],
-                ":",
-                linewidth=0.5,
-                color=color,
-            )
-    plt.scatter(x, y, s=70, facecolors="none", edgecolors="k")
-    plt.axis("scaled")
-    plt.axis("off")
+        plt.scatter(x, y, s=70, facecolors="none", edgecolors="k")
+        plt.axis("scaled")
+        plt.axis("off")
     # plt.show()
 
 
@@ -203,6 +173,7 @@ def decode_shape_circular(
     centered: bool = True,
     s: int = 0,
     base: str = "Polygon",
+    plt: t.Any = plt_,
 ):
     if np.sqrt(s**2) < 1 and "Quadratic" in base:
         raise Exception("Exception: Quadratic shapes requires s >= 1")
@@ -248,7 +219,7 @@ def decode_shape_circular(
         y = radius * np.sin(theta)
     elif base == "CubicFunction":
         x = np.arange(-math.floor(n / 2), math.ceil(n / 2))
-        y = np.array(0.1 * x_**3 + -0.75 * x_ for x_ in x)
+        y = np.fromiter((0.1 * x_**3 + -0.75 * x_ for x_ in x), np.float_)
     labelled = label == None
 
     for i in range(n):
