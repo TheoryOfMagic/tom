@@ -1,24 +1,21 @@
 from __future__ import annotations
 
 import math
-import typing as t
 from abc import ABC
 from abc import abstractmethod
-from collections.abc import Iterator
 from enum import Enum
 from enum import auto
 
 import numpy as np
+from pydantic import BaseModel
 
-from tom.spells.types import SpellGeometryParams
-from tom.util.math import Float
-from tom.util.math import Int
-from tom.util.math import NDArrayFloat
-from tom.util.math import NDArrayInt
+from tom.spells.types import SpellComponentAxis
+from tom.spells.types import SpellComponentGrid
+from tom.spells.types import SpellGeometryStrategy
 
-SpellGeometryAxis = NDArrayInt | NDArrayFloat
-SpellGeometryNode = Int | Float
-SpellGeometryElement = tuple[SpellGeometryNode, SpellGeometryNode]
+# Types
+
+SPELL_GEOMETRY_STRATEGIES_REGISTRY: dict[SpellGeometries, type[SpellGeometry]] = {}
 
 
 class SpellGeometries(Enum):
@@ -31,169 +28,176 @@ class SpellGeometries(Enum):
     quarter_circle = auto()
 
 
-class SpellGeometry(Iterator[SpellGeometryElement]):
-    """Geometry base class for a generic spell.
+class SpellGeometryParams(BaseModel):
+    class Config:
+        frozen = True
 
-    This class stores a list of verticies and can be used idiomatically like a typical
-    collection to grab the vertices at individual points
-    """
+    node_count: int = 1
+    start_angle: float = 0.0
+    radius: float = 1.0
 
-    x: SpellGeometryAxis
-    y: SpellGeometryAxis
+    @property
+    def n(self) -> int:
+        return self.node_count
 
-    def __init__(self, x: SpellGeometryAxis, y: SpellGeometryAxis) -> None:
-        self.x = x
-        self.y = y
+    @property
+    def t0(self) -> float | None:
+        return self.start_angle
 
-    def __len__(self) -> int:
-        return len(self.x)
-
-    def __getitem__(self, index: int) -> SpellGeometryElement:
-        return t.cast(SpellGeometryElement, (self.x[index], self.y[index]))
-
-    def __iter__(self) -> Iterator[SpellGeometryElement]:
-        for element in zip(self.x, self.y, strict=True):
-            yield t.cast(SpellGeometryElement, element)
-
-    def __next__(self) -> SpellGeometryElement:
-        # TODO: Implement
-        raise NotImplementedError
-
-    # Factory methods
-    @staticmethod
-    def build_with(
-        strategy: SpellGeometries | type[SpellGeometryBuildStrategy],
-        params: SpellGeometryParams,
-    ) -> SpellGeometry:
-        if isinstance(strategy, SpellGeometries):
-            strategy = _spell_geometry_strategies_registry[strategy]
-        return strategy.build(params)
+    @property
+    def r(self) -> float:
+        return self.radius
 
 
-# Geometry Strategies
-
-_spell_geometry_strategies_registry: dict[
-    SpellGeometries, type[SpellGeometryBuildStrategy]
-] = {}
+# Spell Geometries
 
 
-class SpellGeometryBuildStrategy(ABC):
-    geometry: SpellGeometries | None = None
+class SpellGeometry(ABC):
+    geometry: SpellGeometries
+    params: SpellGeometryParams
+
+    @property
+    def p(self) -> SpellGeometryParams:
+        return self.params
 
     def __init_subclass__(cls) -> None:
-        if cls == SpellGeometryBuildStrategy:
-            pass
+        if not hasattr(cls, "geometry"):
+            raise TypeError(
+                "Expected non-null geometry attribute defined for SpellGeometry subclasses"
+            )
 
-        if cls.geometry and cls.geometry not in _spell_geometry_strategies_registry:
-            _spell_geometry_strategies_registry[cls.geometry] = cls
+        if cls.geometry in SPELL_GEOMETRY_STRATEGIES_REGISTRY:
+            raise TypeError(
+                f"SpellGeometryBuildStrategy subclass already defined with geometry={cls.geometry.name}"
+            )
 
-        return super().__init_subclass__()
+        SPELL_GEOMETRY_STRATEGIES_REGISTRY[cls.geometry] = cls
 
-    @classmethod
+    def __init__(self, params: SpellGeometryParams | None = None):
+        self.params = params or SpellGeometryParams()
+
+    def __call__(self) -> SpellComponentGrid:
+        return self.build()
+
+    # Abstract factory methods
+
     @abstractmethod
-    def build(cls, params: SpellGeometryParams) -> SpellGeometry:
+    def build(self) -> SpellComponentGrid:
         raise NotImplementedError
 
 
-class LineSpell(SpellGeometryBuildStrategy):
-    # TODO: Issues
+class LineSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.line
 
-    @classmethod
-    def build(cls, params: SpellGeometryParams) -> SpellGeometry:
-        return SpellGeometry(
-            x=np.arange(0, params.n),
-            y=np.zeros(params.n),
+    def build(self) -> SpellComponentGrid:
+        return (
+            np.arange(0, self.p.n),
+            np.zeros(self.p.n),
         )
 
 
-class PolygonSpell(SpellGeometryBuildStrategy):
+class PolygonSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.polygon
 
-    @classmethod
-    def build(cls, params: SpellGeometryParams) -> SpellGeometry:
+    def build(self) -> SpellComponentGrid:
         small_angle = np.fromiter(
-            (params.t0 + i * 2 * np.pi / params.n for i in np.arange(1, params.n + 1)),
+            (self.p.t0 + i * 2 * np.pi / self.p.n for i in np.arange(1, self.p.n + 1)),
             np.float_,
         )
 
-        return SpellGeometry(
-            x=params.r * np.sin(small_angle),
-            y=params.r * np.cos(small_angle),
+        return (
+            self.p.r * np.sin(small_angle),
+            self.p.r * np.cos(small_angle),
         )
 
 
-class QuadraticSpell(SpellGeometryBuildStrategy):
+class QuadraticSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.quadratic
 
-    @classmethod
-    def build_from_x(cls, x: SpellGeometryAxis) -> SpellGeometry:
-        return SpellGeometry(x=x, y=np.fromiter((x_**2 for x_ in x), np.float_))
+    def build(self) -> SpellComponentGrid:
+        return self._build_from_x(
+            x=np.arange(-math.floor(self.p.n / 2), math.ceil(self.p.n / 2)),
+        )
 
-    @classmethod
-    def build(cls, params: SpellGeometryParams) -> SpellGeometry:
-        return cls.build_from_x(
-            x=np.arange(-math.floor(params.n / 2), math.ceil(params.n / 2)),
+    def _build_from_x(self, x: SpellComponentAxis) -> SpellComponentGrid:
+        return (
+            x,
+            np.fromiter((x_**2 for x_ in x), np.float_),
         )
 
 
-class QuadraticCenteredSpell(QuadraticSpell):
+class QuadraticCenteredSpell(QuadraticSpellGeometry):
     geometry = SpellGeometries.quadratic_centered
 
-    @classmethod
-    def build(cls, params: SpellGeometryParams) -> SpellGeometry:
+    def build(self) -> SpellComponentGrid:
         _x = np.array([0])
-        while len(_x) < params.n:
+        while len(_x) < self.p.n:
             _x = np.append(
                 _x,
                 (-_x[-1] + 1) if -_x[-1] in _x else (-_x[-1]),
             )
 
-        return cls.build_from_x(x=_x)
+        return self._build_from_x(x=_x)
 
 
-class CubicSpell(SpellGeometryBuildStrategy):
+class CubicSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.cubic
 
-    @classmethod
-    def build_from_x(cls, x: SpellGeometryAxis) -> SpellGeometry:
-        return SpellGeometry(
-            x=x,
-            y=np.fromiter((0.1 * x_**3 + -0.75 * x_ for x_ in x), np.float_),
+    def build(self) -> SpellComponentGrid:
+        return self._build_from_x(
+            x=np.arange(-math.floor(self.p.n / 2), math.ceil(self.p.n / 2))
         )
 
-    @classmethod
-    def build(cls, params: SpellGeometryParams) -> SpellGeometry:
-        return cls.build_from_x(
-            x=np.arange(-math.floor(params.n / 2), math.ceil(params.n / 2))
+    def _build_from_x(self, x: SpellComponentAxis) -> SpellComponentGrid:
+        return (
+            x,
+            np.fromiter((0.1 * x_**3 + -0.75 * x_ for x_ in x), np.float_),
         )
 
 
-class SemiCircleSpell(SpellGeometryBuildStrategy):
+class SemiCircleSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.semi_circle
 
-    @classmethod
-    def build(cls, params: SpellGeometryParams) -> SpellGeometry:
+    def build(self) -> SpellComponentGrid:
         theta0 = 0
         theta1 = -np.pi
-        theta = np.linspace(theta0, theta1, params.n)
+        theta = np.linspace(theta0, theta1, self.p.n)
 
-        return SpellGeometry(
-            x=params.r * np.cos(theta),
-            y=params.r * np.sin(theta),
+        return (
+            self.p.r * np.cos(theta),
+            self.p.r * np.sin(theta),
         )
 
 
-class QuarterCircleSpell(SpellGeometryBuildStrategy):
+class QuarterCircleSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.quarter_circle
 
-    @classmethod
-    def build(cls, params: SpellGeometryParams) -> SpellGeometry:
+    def build(self) -> SpellComponentGrid:
         theta0 = 0
         theta1 = -np.pi / 2
-        theta = np.linspace(theta0, theta1, params.n)
+        theta = np.linspace(theta0, theta1, self.p.n)
 
-        return SpellGeometry(
-            x=params.r * np.cos(theta),
-            y=params.r * np.sin(theta),
+        return (
+            self.p.r * np.cos(theta),
+            self.p.r * np.sin(theta),
         )
+
+
+# Factory Methods (for use with Spell classes)
+
+
+def get_geometry_build_strategy(
+    geometry: SpellGeometries | str,
+    params: SpellGeometryParams | None = None,
+) -> SpellGeometryStrategy:
+    if isinstance(geometry, str):
+        maybe_geometry = SpellGeometries.__members__.get(geometry)
+        if not maybe_geometry:
+            raise KeyError(f"No spell geometry found for {geometry}")
+        geometry = maybe_geometry
+
+    strategy = SPELL_GEOMETRY_STRATEGIES_REGISTRY.get(geometry)
+    if not strategy:
+        raise KeyError(f"No build strategy found for {geometry} spell geometry")
+
+    return strategy(params)
