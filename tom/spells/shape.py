@@ -8,7 +8,7 @@ import numpy as np
 
 from tom.spells.geometry import SpellGeometries
 from tom.spells.geometry import SpellGeometry
-from tom.spells.types import SpellGeometryParams
+from tom.spells.geometry import SpellGeometryParams
 from tom.util.math import NDArray
 from tom.util.math import NDArrayFloat
 from tom.util.math import NDArrayInt

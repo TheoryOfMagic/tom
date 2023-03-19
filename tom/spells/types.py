@@ -15,7 +15,7 @@ SpellComponentAxis = NDArrayInt | NDArrayFloat
 SpellComponentGrid = tuple[SpellComponentAxis, SpellComponentAxis]
 
 
-SpellGeometryStrategy = Callable[[], SpellComponentGrid]
+SpellGeometryStrategy = Callable[[int], SpellComponentGrid]
 SpellPathingStrategy = Callable[
     [SpellComponentNode, SpellComponentNode], SpellComponentPath
 ]

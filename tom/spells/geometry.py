@@ -32,13 +32,8 @@ class SpellGeometryParams(BaseModel):
     class Config:
         frozen = True
 
-    node_count: int = 1
     start_angle: float = 0.0
     radius: float = 1.0
-
-    @property
-    def n(self) -> int:
-        return self.node_count
 
     @property
     def t0(self) -> float | None:
@@ -76,32 +71,32 @@ class SpellGeometry(ABC):
     def __init__(self, params: SpellGeometryParams | None = None):
         self.params = params or SpellGeometryParams()
 
-    def __call__(self) -> SpellComponentGrid:
-        return self.build()
+    def __call__(self, node_count: int) -> SpellComponentGrid:
+        return self.build(node_count=node_count)
 
     # Abstract factory methods
 
     @abstractmethod
-    def build(self) -> SpellComponentGrid:
+    def build(self, node_count: int) -> SpellComponentGrid:
         raise NotImplementedError
 
 
 class LineSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.line
 
-    def build(self) -> SpellComponentGrid:
+    def build(self, node_count: int) -> SpellComponentGrid:
         return (
-            np.arange(0, self.p.n),  # type: ignore
-            np.zeros(self.p.n),
+            np.arange(0, node_count),  # type: ignore
+            np.zeros(node_count),
         )
 
 
 class PolygonSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.polygon
 
-    def build(self) -> SpellComponentGrid:
+    def build(self, node_count: int) -> SpellComponentGrid:
         small_angle = np.fromiter(
-            (self.p.t0 + i * 2 * np.pi / self.p.n for i in np.arange(1, self.p.n + 1)),  # type: ignore
+            (self.p.t0 + i * 2 * np.pi / node_count for i in np.arange(1, node_count + 1)),  # type: ignore
             np.float_,
         )
 
@@ -114,9 +109,9 @@ class PolygonSpellGeometry(SpellGeometry):
 class QuadraticSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.quadratic
 
-    def build(self) -> SpellComponentGrid:
+    def build(self, node_count: int) -> SpellComponentGrid:
         return self._build_from_x(
-            x=np.arange(-math.floor(self.p.n / 2), math.ceil(self.p.n / 2)),  # type: ignore
+            x=np.arange(-math.floor(node_count / 2), math.ceil(node_count / 2)),  # type: ignore
         )
 
     def _build_from_x(self, x: SpellComponentAxis) -> SpellComponentGrid:
@@ -129,9 +124,9 @@ class QuadraticSpellGeometry(SpellGeometry):
 class QuadraticCenteredSpell(QuadraticSpellGeometry):
     geometry = SpellGeometries.quadratic_centered
 
-    def build(self) -> SpellComponentGrid:
+    def build(self, node_count: int) -> SpellComponentGrid:
         _x = np.array([0])
-        while len(_x) < self.p.n:
+        while len(_x) < node_count:
             _x = np.append(
                 _x,
                 (-_x[-1] + 1) if -_x[-1] in _x else (-_x[-1]),
@@ -143,9 +138,9 @@ class QuadraticCenteredSpell(QuadraticSpellGeometry):
 class CubicSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.cubic
 
-    def build(self) -> SpellComponentGrid:
+    def build(self, node_count: int) -> SpellComponentGrid:
         return self._build_from_x(
-            x=np.arange(-math.floor(self.p.n / 2), math.ceil(self.p.n / 2))  # type: ignore
+            x=np.arange(-math.floor(node_count / 2), math.ceil(node_count / 2))  # type: ignore
         )
 
     def _build_from_x(self, x: SpellComponentAxis) -> SpellComponentGrid:
@@ -158,10 +153,10 @@ class CubicSpellGeometry(SpellGeometry):
 class SemiCircleSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.semi_circle
 
-    def build(self) -> SpellComponentGrid:
+    def build(self, node_count: int) -> SpellComponentGrid:
         theta0 = 0
         theta1 = -np.pi
-        theta = np.linspace(theta0, theta1, self.p.n)
+        theta = np.linspace(theta0, theta1, node_count)
 
         return (
             self.p.r * np.cos(theta),
@@ -172,10 +167,10 @@ class SemiCircleSpellGeometry(SpellGeometry):
 class QuarterCircleSpellGeometry(SpellGeometry):
     geometry = SpellGeometries.quarter_circle
 
-    def build(self) -> SpellComponentGrid:
+    def build(self, node_count: int) -> SpellComponentGrid:
         theta0 = 0
         theta1 = -np.pi / 2
-        theta = np.linspace(theta0, theta1, self.p.n)
+        theta = np.linspace(theta0, theta1, node_count)
 
         return (
             self.p.r * np.cos(theta),

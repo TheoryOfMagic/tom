@@ -84,7 +84,7 @@ class Spell:
     ) -> S:
         features = features or SpellFeatures()
 
-        nodes = cls._build_spell_nodes_with(geometry)
+        nodes = cls._build_spell_nodes_with(geometry, len(features))
 
         node_pairs = cls.apply_features(nodes, features)
         paths = cls._build_spell_paths_with(pathing, node_pairs)
@@ -95,8 +95,9 @@ class Spell:
     def _build_spell_nodes_with(
         cls,
         geometry: SpellGeometryStrategy,
+        node_count: int,
     ) -> SpellComponentGrid:
-        return geometry()
+        return geometry(node_count)
 
     @classmethod
     def _build_spell_paths_with(
