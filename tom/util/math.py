@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import math
 import typing as t
-from enum import Enum
-from enum import auto
 
 import numpy as np
 import numpy.typing as npt

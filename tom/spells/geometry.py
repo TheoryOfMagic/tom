@@ -91,7 +91,7 @@ class LineSpellGeometry(SpellGeometry):
 
     def build(self) -> SpellComponentGrid:
         return (
-            np.arange(0, self.p.n),
+            np.arange(0, self.p.n),  # type: ignore
             np.zeros(self.p.n),
         )
 
@@ -101,7 +101,7 @@ class PolygonSpellGeometry(SpellGeometry):
 
     def build(self) -> SpellComponentGrid:
         small_angle = np.fromiter(
-            (self.p.t0 + i * 2 * np.pi / self.p.n for i in np.arange(1, self.p.n + 1)),
+            (self.p.t0 + i * 2 * np.pi / self.p.n for i in np.arange(1, self.p.n + 1)),  # type: ignore
             np.float_,
         )
 
@@ -116,7 +116,7 @@ class QuadraticSpellGeometry(SpellGeometry):
 
     def build(self) -> SpellComponentGrid:
         return self._build_from_x(
-            x=np.arange(-math.floor(self.p.n / 2), math.ceil(self.p.n / 2)),
+            x=np.arange(-math.floor(self.p.n / 2), math.ceil(self.p.n / 2)),  # type: ignore
         )
 
     def _build_from_x(self, x: SpellComponentAxis) -> SpellComponentGrid:
@@ -145,7 +145,7 @@ class CubicSpellGeometry(SpellGeometry):
 
     def build(self) -> SpellComponentGrid:
         return self._build_from_x(
-            x=np.arange(-math.floor(self.p.n / 2), math.ceil(self.p.n / 2))
+            x=np.arange(-math.floor(self.p.n / 2), math.ceil(self.p.n / 2))  # type: ignore
         )
 
     def _build_from_x(self, x: SpellComponentAxis) -> SpellComponentGrid:
